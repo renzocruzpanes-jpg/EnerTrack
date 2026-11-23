@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EnerTrack | Household Energy & Cost Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<!-- Top Navigation -->
+<nav class="navbar navbar-expand-lg navbar-dark navbar-enertrack mb-4 py-3 sticky-top shadow-sm no-print">
+    <div class="container">
+        <a class="navbar-brand fw-bold" href="/">⚡ EnerTrack</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#enertrackNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="enertrackNav">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0 small align-items-lg-center gap-lg-1">
+                <li class="nav-item"><a class="nav-link text-white" href="#setupSection">Appliances</a></li>
+                <li class="nav-item"><a class="nav-link text-white" href="#whatIfSection">What-If Analyzer</a></li>
+                <li class="nav-item"><a class="nav-link text-white" href="#simSection">Simulation & Charts</a></li>
+                <li class="nav-item"><a class="nav-link text-white" href="#tipsSection">Saving Tips</a></li>
+                <li class="nav-item ms-lg-2">
+                    <a class="nav-link text-white fw-semibold nav-pill-active" href="/dorm">🏠 Dormmate Splitter</a>
+                </li>
+            </ul>
+            <div class="d-flex align-items-center gap-3">
+                <span class="text-white small">👤 <strong>{{ user_name or 'Guest' }}</strong></span>
+                <a href="/logout" class="btn btn-outline-light btn-sm">Logout</a>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<div class="container pb-5">
+    <!-- Status Toast -->
+    <div id="statusAlert" class="alert d-none py-2 small shadow-sm no-print" role="alert"></div>
+
+    <!-- Dashboard Welcome & Profile Toolbar -->
+    <div class="dashboard-hero p-4 mb-4 shadow-sm">
+        <div class="row align-items-center g-3">
+            <div class="col-lg-6">
+                <span class="badge bg-white text-success fw-semibold mb-2">30-Day Billing Cycle Overview</span>
+                <h3 class="fw-bold mb-1">Household Energy Dashboard</h3>
+                <p class="text-white-50 small mb-0">
+                    Active Provider: <strong class="text-white" id="heroUtilityName">BATELEC II</strong> • Real-time kWh & Philippine utility rate estimator.
+                </p>
+            </div>
+            <div class="col-lg-6 no-print">
+                <div class="bg-white bg-opacity-10 p-3 rounded-3 border border-white border-opacity-25">
+                    <div class="small text-white fw-semibold mb-2">Saved Household Profiles</div>
+                    <div class="row g-2">
+                        <div class="col-sm-5">
+                            <div class="input-group input-group-sm">
+                                <input type="text" id="profileNameInput" class="form-control border-0" placeholder="New profile name...">
+                                <button class="btn btn-light text-success fw-semibold" onclick="saveCurrentProfile()">Save</button>
+                            </div>
+                        </div>
+                        <div class="col-sm-4">
+                            <select id="savedProfilesSelect" class="form-select form-select-sm border-0">
+                                <option value="">Load profile...</option>
+                            </select>
+                        </div>
+                        <div class="col-sm-3 d-flex gap-1">
+                            <button class="btn btn-light text-success btn-sm w-100 fw-semibold" onclick="loadSelectedProfile()">Load</button>
+                            <button class="btn btn-outline-light btn-sm" onclick="deleteSelectedProfile()" title="Delete Profile">✕</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top KPI Summary Row -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+            <div class="kpi-card">
+                <div class="small text-muted fw-semibold">Total Monthly Usage</div>
+                <div class="h4 fw-bold text-dark mb-0 mt-1" id="totalKwh">0 kWh</div>
+                <div class="small text-success mt-1">30-day consumption</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="kpi-card">
+                <div class="small text-muted fw-semibold">Base Generation Cost</div>
+                <div class="h4 fw-bold text-dark mb-0 mt-1" id="baseCost">₱0.00</div>
+                <div class="small text-muted mt-1">Before fees & taxes</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="kpi-card">
+                <div class="small text-muted fw-semibold">Distribution & 12% VAT</div>
+                <div class="h4 fw-bold text-dark mb-0 mt-1" id="feesCost">₱0.00</div>
+                <div class="small text-muted mt-1">Other charges + fixed fee</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="kpi-card-featured">
+                <div class="small text-white-50 fw-semibold">Estimated Monthly Bill</div>
+                <div class="h4 fw-bold text-white mb-0 mt-1" id="grandTotal">₱0.00</div>
+                <div class="small text-white-50 mt-1">Total payable estimate</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Workspace: Setup & Active Appliances -->
+    <div id="setupSection" class="row g-4 mb-4">
+        <!-- Left: Add Appliance -->
+        <div class="col-lg-4 no-print">
+            <div class="card-dashboard p-4 h-100 d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0">Utility & Appliance</h5>
+                    <span class="section-step-badge">Step 1</span>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold mb-1">Electric Utility Provider</label>
+                    <select id="utilitySelect" class="form-select form-select-sm" onchange="toggleCustomRate(); recalculateAll();">
+                        {% for code, info in utilities.items() %}
+                        <option value="{{ code }}" {% if code == 'BATELEC_II' %}selected{% endif %}>
+                            {{ info.name }} (₱{{ "%.2f"|format(info.base_rate) }}/kWh)
+                        </option>
+                        {% endfor %}
+                        <option value="CUSTOM">Custom Rate (Enter from bill)</option>
+                    </select>
+                </div>
+
+                <!-- Custom Rate Box -->
+                <div id="customRateBox" class="row g-2 mb-3 p-2 bg-light rounded border d-none">
+                    <div class="col-6">
+                        <label class="form-label small fw-semibold mb-1">Base (₱/kWh)</label>
+                        <input type="number" id="customBaseRate" class="form-control form-control-sm" value="6.50" step="0.01" min="0" oninput="recalculateAll()">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-semibold mb-1">Fees (₱/kWh)</label>
+                        <input type="number" id="customOtherRate" class="form-control form-control-sm" value="3.50" step="0.01" min="0" oninput="recalculateAll()">
+                    </div>
+                </div>
+
+                <hr class="my-2 text-muted opacity-25">
+
+                <div class="mb-2 mt-2">
+                    <label class="form-label small fw-semibold mb-1">Quick Select Preset</label>
+                    <select id="presetSelect" class="form-select form-select-sm" onchange="fillFromPreset()">
+                        <option value="">-- Choose a preset or type below --</option>
+                        {% for item in presets %}
+                        <option value='{{ item | tojson }}'>{{ item.name }} ({{ item.watts }}W)</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="mb-2">
+                    <label class="form-label small fw-semibold mb-1">Appliance Label</label>
+                    <input type="text" id="appName" class="form-control form-control-sm" placeholder="e.g., Stand Fan">
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label small fw-semibold mb-1">Wattage (W)</label>
+                        <input type="number" id="appWatts" class="form-control form-control-sm" placeholder="65" min="1">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-semibold mb-1">Hours / Day</label>
+                        <input type="number" id="appHours" class="form-control form-control-sm" placeholder="8" step="0.5" min="0.1" max="24">
+                    </div>
+                </div>
+
+                <button class="btn btn-success w-100 fw-semibold py-2 mt-auto" onclick="addAppliance()">+ Add to Dashboard</button>
+            </div>
+        </div>
+
+        <!-- Right: Active Appliance Table -->
+        <div class="col-lg-8">
+            <div class="card-dashboard p-4 h-100 d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                    <div>
+                        <h5 class="fw-bold mb-0">Active Household Appliances</h5>
+                        <small class="text-muted no-print">Click any wattage or hours value to edit inline.</small>
+                    </div>
+                    <div class="d-flex gap-2 no-print">
+                        <button class="btn btn-outline-success btn-sm fw-semibold" onclick="exportCSV()">📥 Export CSV</button>
+                        <button class="btn btn-outline-secondary btn-sm fw-semibold" onclick="window.print()">🖨️ Print</button>
+                        <button class="btn btn-outline-danger btn-sm" onclick="clearAppliances()">Clear</button>
+                    </div>
+                </div>
+
+                <div class="table-responsive" style="max-height: 310px;">
+                    <table class="table table-hover table-sm align-middle small">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Appliance</th>
+                                <th>Watts</th>
+                                <th>Hrs/Day</th>
+                                <th>Monthly kWh</th>
+                                <th>Monthly Cost</th>
+                                <th class="no-print"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="applianceTableBody"></tbody>
+                    </table>
+                </div>
+
+                <div class="small text-muted bg-light border rounded p-2 px-3 mt-auto">
+                    <strong>Note:</strong> Calculations reflect a 30-day billing cycle including base generation rate, distribution/other charges, fixed fee, and 12% VAT.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analytics & Charts Row -->
+    <div id="simSection" class="row g-4 mb-4">
+        <div class="col-lg-5">
+            <div class="card-dashboard p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <h5 class="fw-bold mb-0">Consumption Share</h5>
+                    <span class="section-step-badge">kWh Breakdown</span>
+                </div>
+                <p class="text-muted small mb-3">Percentage of monthly power used per appliance.</p>
+                <div style="height: 260px;">
+                    <canvas id="usageChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-7">
+            <div class="card-dashboard p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-1 flex-wrap gap-2">
+                    <h5 class="fw-bold mb-0">Whole-House Savings Simulator</h5>
+                    <span class="badge bg-success fs-6" id="savingsBadge">Save ₱0.00 (0%)</span>
+                </div>
+                <p class="text-muted small mb-3">
+                    Slide to preview combined savings from shorter usage hours and higher-efficiency appliances.
+                </p>
+
+                <div class="row g-3 align-items-center mb-3 no-print">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">
+                            Reduce Usage Hours by: <span id="hourCutLabel" class="text-success fw-bold">20%</span>
+                        </label>
+                        <input type="range" class="form-range" id="hourCutSlider" min="0" max="50" value="20" oninput="runSimulation()">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">
+                            Upgrade Wattage Efficiency (-%): <span id="wattCutLabel" class="text-success fw-bold">15%</span>
+                        </label>
+                        <input type="range" class="form-range" id="wattCutSlider" min="0" max="50" value="15" oninput="runSimulation()">
+                    </div>
+                </div>
+
+                <div style="height: 195px;">
+                    <canvas id="simChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Single-Appliance "What-If" Factor Analyzer -->
+    <div id="whatIfSection" class="card-dashboard p-4 mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-1 flex-wrap gap-2">
+            <h5 class="fw-bold mb-0">Single-Appliance "What-If" Analyzer</h5>
+            <span class="section-step-badge">Brand / Usage Comparison</span>
+        </div>
+        <p class="text-muted small mb-3">
+            Compare replacing a single appliance with an inverter model or adjusting its daily hours.
+        </p>
+
+        <div class="row g-2 align-items-end no-print">
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold mb-1">Select Appliance</label>
+                <select id="whatIfSelect" class="form-select form-select-sm" onchange="loadWhatIfBaseline()"></select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold mb-1">Current Watts (W)</label>
+                <input type="number" id="wiOldWatts" class="form-control form-control-sm bg-light" readonly>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold mb-1">Current Hrs/Day</label>
+                <input type="number" id="wiOldHours" class="form-control form-control-sm bg-light" readonly>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold text-success mb-1">New Watts (Brand X)</label>
+                <input type="number" id="wiNewWatts" class="form-control form-control-sm border-success" value="30" min="0" oninput="runWhatIf()">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold text-success mb-1">New Hrs/Day</label>
+                <input type="number" id="wiNewHours" class="form-control form-control-sm border-success" value="10" step="0.5" min="0" max="24" oninput="runWhatIf()">
+            </div>
+            <div class="col-md-1">
+                <button class="btn btn-success btn-sm w-100 fw-semibold" onclick="runWhatIf()">Test</button>
+            </div>
+        </div>
+
+        <div id="whatIfResultBox" class="alert alert-success mt-3 mb-0 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <strong>Impact Analysis:</strong> <span id="wiSummaryText">Select an appliance above to analyze changes.</span>
+            </div>
+            <div class="fw-bold fs-6" id="wiAnnualImpact"></div>
+        </div>
+    </div>
+
+    <!-- Smart Dynamic Energy-Saving Tips Section -->
+    <div id="tipsSection" class="card-dashboard p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <div>
+                <h5 class="fw-bold mb-0">Personalized Energy-Saving Recommendations</h5>
+                <small class="text-muted">Tailored to your highest-consuming appliances.</small>
+            </div>
+            <span class="section-step-badge" id="topConsumerBadge">Analyzing top usage...</span>
+        </div>
+        <div class="row g-3" id="tipsContainer"></div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const FALLBACK_TIPS = {{ tips | tojson }};
+    let lastCalculatedData = null;
+
+    let appliances = [
+        { name: "Non-Inverter Aircon (1.0 HP)", watts: 900, hours: 8 },
+        { name: "Stand Fan (Standard)", watts: 65, hours: 12 },
+        { name: "Refrigerator (Two-Door Inverter)", watts: 120, hours: 24 }
+    ];
+
+    let usageChart = null;
+    let simChart = null;
+    let savedProfiles = [];
+
+    function escapeHtml(str) {
+        const div = document.createElement("div");
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    function showStatus(message, type = "success") {
+        const alertBox = document.getElementById("statusAlert");
+        alertBox.className = `alert alert-${type} py-2 small shadow-sm no-print`;
+        alertBox.textContent = message;
+        setTimeout(() => alertBox.classList.add("d-none"), 3500);
+    }
+
+    async function apiFetch(url, options = {}) {
+        const res = await fetch(url, options);
+        if (res.status === 401 || res.redirected) {
+            window.location.href = "/login";
+            return null;
+        }
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.error || "Request failed");
+        }
+        return data;
+    }
+
+    function renderDynamicTips(data) {
+        const container = document.getElementById("tipsContainer");
+        const badge = document.getElementById("topConsumerBadge");
+        const items = data.appliances || [];
+        const serverTips = data.tips || [];
+
+        if (items.length === 0) {
+            badge.textContent = "Add appliances for tailored tips";
+            container.innerHTML = `
+                <div class="col-12 text-center text-muted py-3 small">
+                    Add at least one appliance above to generate personalized cost-saving recommendations.
+                </div>`;
+            return;
+        }
+
+        const top = items.reduce((max, item) => item.kwh > max.kwh ? item : max, items[0]);
+        badge.textContent = `Top Load: ${top.name} (${top.kwh} kWh/mo • ₱${top.total_cost.toLocaleString()})`;
+
+        const tipsToRender = serverTips.length ? serverTips : FALLBACK_TIPS.map(t => ({
+            category: t.category,
+            appliance: "General Household",
+            priority: "General Tip",
+            title: t.title,
+            detail: t.detail
+        }));
+
+        container.innerHTML = tipsToRender.map(tip => {
+            const isHighImpact = tip.priority === "High Impact";
+            return `
+                <div class="col-md-4">
+                    <div class="rounded-3 p-3 h-100 ${isHighImpact ? 'tip-card-priority' : 'tip-card-standard'}">
+                        <div class="d-flex justify-content-between align-items-center mb-2 gap-1 flex-wrap">
+                            <span class="badge bg-success">${escapeHtml(tip.category)}</span>
+                            <span class="badge ${isHighImpact ? 'bg-dark text-white' : 'bg-secondary'}">
+                                ${escapeHtml(tip.priority || 'Tip')}
+                            </span>
+                        </div>
+                        <h6 class="fw-bold mb-1">${escapeHtml(tip.title)}</h6>
+                        ${tip.appliance ? `<div class="small text-success fw-semibold mb-2">Target: ${escapeHtml(tip.appliance)}</div>` : ''}
+                        <p class="small text-muted mb-0">${escapeHtml(tip.detail)}</p>
+                    </div>
+                </div>
+            `;
+        }).join("");
+    }
+
+    function exportCSV() {
+        if (!lastCalculatedData || !lastCalculatedData.appliances.length) {
+            showStatus("Add at least one appliance before exporting.", "secondary");
+            return;
+        }
+        const rows = [
+            ["EnerTrack Household Energy & Cost Report"],
+            ["Utility Provider", `"${lastCalculatedData.utility_name}"`],
+            ["Total Monthly kWh", lastCalculatedData.total_kwh],
+            ["Base Cost (PHP)", lastCalculatedData.cost_without_fees],
+            ["Fees & 12% VAT (PHP)", lastCalculatedData.fees_and_taxes],
+            ["Estimated Total Bill (PHP)", lastCalculatedData.total_cost_with_fees],
+            [],
+            ["Appliance", "Watts (W)", "Hours/Day", "Monthly kWh", "Total Cost (PHP)"]
+        ];
+        lastCalculatedData.appliances.forEach(a => {
+            rows.push([`"${a.name.replace(/"/g, '""')}"`, a.watts, a.hours, a.kwh, a.total_cost]);
+        });
+
+        const blob = new Blob([rows.map(r => r.join(",")).join("\n")], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "EnerTrack_Monthly_Report.csv";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
+
+    async function fetchSavedProfiles() {
+        try {
+            const data = await apiFetch("/api/profiles");
+            if (!data) return;
+            savedProfiles = data;
+            const select = document.getElementById("savedProfilesSelect");
+            select.innerHTML = '<option value="">Load profile...</option>';
+            savedProfiles.forEach(p => {
+                const opt = document.createElement("option");
+                opt.value = p.id;
+                opt.textContent = `${p.profile_name} (${p.appliances.length} items)`;
+                select.appendChild(opt);
+            });
+        } catch (err) {
+            showStatus(err.message, "danger");
+        }
+    }
+
+    async function saveCurrentProfile() {
+        const profileName = document.getElementById("profileNameInput").value.trim();
+        if (!profileName) {
+            showStatus("Enter a name for this household profile first.", "secondary");
+            return;
+        }
+        try {
+            const utilityCode = document.getElementById("utilitySelect").value;
+            await apiFetch("/api/profiles", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    profile_name: profileName,
+                    utility_code: utilityCode,
+                    appliances: appliances
+                })
+            });
+            document.getElementById("profileNameInput").value = "";
+            await fetchSavedProfiles();
+            showStatus(`Saved profile "${profileName}"!`);
+        } catch (err) {
+            showStatus(err.message, "danger");
+        }
+    }
+
+    function loadSelectedProfile() {
+        const id = parseInt(document.getElementById("savedProfilesSelect").value);
+        const found = savedProfiles.find(p => p.id === id);
+        if (!found) return;
+        document.getElementById("utilitySelect").value = found.utility_code;
+        toggleCustomRate();
+        appliances = JSON.parse(JSON.stringify(found.appliances));
+        recalculateAll();
+        showStatus(`Loaded "${found.profile_name}".`);
+    }
+
+    async function deleteSelectedProfile() {
+        const id = parseInt(document.getElementById("savedProfilesSelect").value);
+        if (!id) return;
+        try {
+            await apiFetch(`/api/profiles/${id}`, { method: "DELETE" });
+            await fetchSavedProfiles();
+            showStatus("Profile deleted.", "secondary");
+        } catch (err) {
+            showStatus(err.message, "danger");
+        }
+    }
+
+    function toggleCustomRate() {
+        const isCustom = document.getElementById("utilitySelect").value === "CUSTOM";
+        document.getElementById("customRateBox").classList.toggle("d-none", !isCustom);
+    }
+
+    function getRatePayload() {
+        const utilityCode = document.getElementById("utilitySelect").value;
+        if (utilityCode === "CUSTOM") {
+            return {
+                utility_code: "CUSTOM",
+                custom_rate: {
+                    name: "Custom Utility Rate",
+                    base_rate: parseFloat(document.getElementById("customBaseRate").value) || 0,
+                    other_charges: parseFloat(document.getElementById("customOtherRate").value) || 0,
+                    vat_rate: 0.12,
+                    fixed_monthly_fee: 5.60
+                }
+            };
+        }
+        return { utility_code: utilityCode, custom_rate: null };
+    }
+
+    function fillFromPreset() {
+        const val = document.getElementById("presetSelect").value;
+        if (!val) return;
+        const item = JSON.parse(val);
+        document.getElementById("appName").value = item.name;
+        document.getElementById("appWatts").value = item.watts;
+        document.getElementById("appHours").value = item.default_hours;
+    }
+
+    function addAppliance() {
+        const name = document.getElementById("appName").value.trim();
+        const watts = parseFloat(document.getElementById("appWatts").value);
+        const hours = parseFloat(document.getElementById("appHours").value);
+
+        if (!name || isNaN(watts) || watts <= 0 || isNaN(hours) || hours <= 0 || hours > 24) {
+            showStatus("Please enter a valid appliance name, wattage (> 0), and hours per day (0.1 to 24).", "secondary");
+            return;
+        }
+
+        appliances.push({ name, watts, hours });
+        document.getElementById("appName").value = "";
+        document.getElementById("appWatts").value = "";
+        document.getElementById("appHours").value = "";
+        document.getElementById("presetSelect").value = "";
+        recalculateAll();
+    }
+
+    function updateInlineAppliance(index, field, value) {
+        const num = parseFloat(value);
+        if (isNaN(num) || num <= 0) return;
+        if (field === "hours" && num > 24) return;
+        appliances[index][field] = num;
+        recalculateAll();
+    }
+
+    function removeAppliance(index) {
+        appliances.splice(index, 1);
+        recalculateAll();
+    }
+
+    function clearAppliances() {
+        appliances = [];
+        recalculateAll();
+    }
+
+    async function recalculateAll() {
+        try {
+            const ratePayload = getRatePayload();
+            const data = await apiFetch("/api/calculate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ appliances, ...ratePayload })
+            });
+            if (!data) return;
+
+            lastCalculatedData = data;
+            renderDynamicTips(data);
+
+            document.getElementById("heroUtilityName").textContent = data.utility_name;
+            document.getElementById("totalKwh").textContent = `${data.total_kwh} kWh`;
+            document.getElementById("baseCost").textContent = `₱${data.cost_without_fees.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+            document.getElementById("feesCost").textContent = `₱${data.fees_and_taxes.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+            document.getElementById("grandTotal").textContent = `₱${data.total_cost_with_fees.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+
+            const tbody = document.getElementById("applianceTableBody");
+            tbody.innerHTML = "";
+
+            if (data.appliances.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4 small">No appliances added yet. Add one on the left to estimate your bill.</td></tr>';
+            } else {
+                data.appliances.forEach((item, idx) => {
+                    const tr = document.createElement("tr");
+
+                    const nameTd = document.createElement("td");
+                    nameTd.className = "fw-semibold";
+                    nameTd.textContent = item.name;
+
+                    const wattsTd = document.createElement("td");
+                    const wattsInput = document.createElement("input");
+                    wattsInput.type = "number";
+                    wattsInput.className = "form-control form-control-sm";
+                    wattsInput.style.width = "74px";
+                    wattsInput.value = item.watts;
+                    wattsInput.onchange = () => updateInlineAppliance(idx, "watts", wattsInput.value);
+                    wattsTd.appendChild(wattsInput);
+
+                    const hoursTd = document.createElement("td");
+                    const hoursInput = document.createElement("input");
+                    hoursInput.type = "number";
+                    hoursInput.className = "form-control form-control-sm";
+                    hoursInput.style.width = "74px";
+                    hoursInput.step = "0.5";
+                    hoursInput.max = "24";
+                    hoursInput.value = item.hours;
+                    hoursInput.onchange = () => updateInlineAppliance(idx, "hours", hoursInput.value);
+                    hoursTd.appendChild(hoursInput);
+
+                    const kwhTd = document.createElement("td");
+                    kwhTd.textContent = `${item.kwh} kWh`;
+
+                    const costTd = document.createElement("td");
+                    costTd.className = "fw-bold text-success";
+                    costTd.textContent = `₱${item.total_cost.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+
+                    const delTd = document.createElement("td");
+                    delTd.className = "no-print";
+                    const delBtn = document.createElement("button");
+                    delBtn.className = "btn btn-sm btn-link text-danger p-0 text-decoration-none";
+                    delBtn.textContent = "✕";
+                    delBtn.onclick = () => removeAppliance(idx);
+                    delTd.appendChild(delBtn);
+
+                    tr.append(nameTd, wattsTd, hoursTd, kwhTd, costTd, delTd);
+                    tbody.appendChild(tr);
+                });
+            }
+
+            refreshWhatIfDropdown();
+            updateUsageChart(data.appliances);
+            runSimulation();
+        } catch (err) {
+            showStatus(err.message, "danger");
+        }
+    }
+
+    function refreshWhatIfDropdown() {
+        const select = document.getElementById("whatIfSelect");
+        const currentVal = select.value;
+        select.innerHTML = "";
+
+        if (appliances.length === 0) {
+            document.getElementById("wiOldWatts").value = "";
+            document.getElementById("wiOldHours").value = "";
+            document.getElementById("wiSummaryText").textContent = "Add an appliance to run a What-If comparison.";
+            document.getElementById("wiAnnualImpact").textContent = "";
+            return;
+        }
+
+        appliances.forEach((item, idx) => {
+            const opt = document.createElement("option");
+            opt.value = idx;
+            opt.textContent = `${item.name} (${item.watts}W, ${item.hours}h)`;
+            select.appendChild(opt);
+        });
+        if (currentVal && currentVal < appliances.length) {
+            select.value = currentVal;
+        }
+        loadWhatIfBaseline();
+    }
+
+    function loadWhatIfBaseline() {
+        const idx = document.getElementById("whatIfSelect").value;
+        if (idx === "" || !appliances[idx]) return;
+        const item = appliances[idx];
+        document.getElementById("wiOldWatts").value = item.watts;
+        document.getElementById("wiOldHours").value = item.hours;
+        document.getElementById("wiNewWatts").value = Math.round(item.watts * 0.6);
+        document.getElementById("wiNewHours").value = item.hours;
+        runWhatIf();
+    }
+
+    async function runWhatIf() {
+        const idx = document.getElementById("whatIfSelect").value;
+        if (idx === "" || !appliances[idx]) return;
+        const item = appliances[idx];
+        const newWatts = parseFloat(document.getElementById("wiNewWatts").value);
+        const newHours = parseFloat(document.getElementById("wiNewHours").value);
+        if (isNaN(newWatts) || newWatts < 0 || isNaN(newHours) || newHours < 0 || newHours > 24) return;
+
+        try {
+            const ratePayload = getRatePayload();
+            const res = await apiFetch("/api/what-if", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name: item.name,
+                    old_watts: item.watts,
+                    old_hours: item.hours,
+                    new_name: item.name + " (Modified)",
+                    new_watts: newWatts,
+                    new_hours: newHours,
+                    ...ratePayload
+                })
+            });
+            if (!res) return;
+
+            const box = document.getElementById("whatIfResultBox");
+            const isSaving = res.monthly_bill_change <= 0;
+
+            box.className = `alert ${isSaving ? 'alert-success' : 'alert-secondary'} mt-3 mb-0 d-flex justify-content-between align-items-center flex-wrap gap-2`;
+            const actionWord = isSaving ? "reduces" : "increases";
+            document.getElementById("wiSummaryText").textContent =
+                `Changing ${item.name} from ${item.watts}W (${item.hours}h) to ${newWatts}W (${newHours}h) ${actionWord} your monthly bill by ₱${Math.abs(res.monthly_bill_change).toLocaleString()} (${Math.abs(res.kwh_change)} kWh).`;
+            document.getElementById("wiAnnualImpact").textContent =
+                `${isSaving ? 'Annual Savings:' : 'Annual Extra Cost:'} ₱${Math.abs(res.annual_bill_change).toLocaleString()}/yr`;
+        } catch (err) {
+            showStatus(err.message, "danger");
+        }
+    }
+
+    function updateUsageChart(items) {
+        const ctx = document.getElementById("usageChart").getContext("2d");
+        if (usageChart) usageChart.destroy();
+
+        const greenPalette = ["#0f5132", "#198754", "#20c997", "#52b788", "#74c69d", "#495057", "#adb5bd"];
+
+        usageChart = new Chart(ctx, {
+            type: "doughnut",
+            data: {
+                labels: items.length ? items.map(i => i.name) : ["No Usage"],
+                datasets: [{
+                    data: items.length ? items.map(i => i.kwh) : [1],
+                    backgroundColor: items.length ? greenPalette : ["#dee2e6"],
+                    borderWidth: 2,
+                    borderColor: "#ffffff"
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: "bottom" } }
+            }
+        });
+    }
+
+    function runSimulation() {
+        const hourCutSlider = document.getElementById("hourCutSlider");
+        const wattCutSlider = document.getElementById("wattCutSlider");
+        if (!hourCutSlider || !wattCutSlider) return;
+
+        const hourCut = parseInt(hourCutSlider.value, 10) || 0;
+        const wattCut = parseInt(wattCutSlider.value, 10) || 0;
+
+        document.getElementById("hourCutLabel").textContent = `${hourCut}%`;
+        document.getElementById("wattCutLabel").textContent = `${wattCut}%`;
+
+        const normalBill = lastCalculatedData ? lastCalculatedData.total_cost_with_fees : 0;
+        const normalKwh = lastCalculatedData ? lastCalculatedData.total_kwh : 0;
+
+        const remainingRatio = (1 - hourCut / 100) * (1 - wattCut / 100);
+        const fixedFeeWithVat = normalKwh > 0 ? 5.60 * 1.12 : 0;
+        const variableBill = Math.max(0, normalBill - fixedFeeWithVat);
+        const savingBill = normalKwh > 0
+            ? Number(((variableBill * remainingRatio) + fixedFeeWithVat).toFixed(2))
+            : 0;
+
+        const moneySaved = Math.max(0, Number((normalBill - savingBill).toFixed(2)));
+        const percentSaved = normalBill > 0
+            ? Number(((moneySaved / normalBill) * 100).toFixed(1))
+            : 0;
+
+        document.getElementById("savingsBadge").textContent =
+            `Save ₱${moneySaved.toLocaleString(undefined, { minimumFractionDigits: 2 })} (${percentSaved}%)`;
+
+        const ctx = document.getElementById("simChart").getContext("2d");
+
+        if (simChart) {
+            simChart.data.datasets[0].data = [normalBill, savingBill];
+            simChart.update("none");
+            return;
+        }
+
+        simChart = new Chart(ctx, {
+            type: "bar",
+            data: {
+                labels: ["Current Usage", "Energy-Saving Scenario"],
+                datasets: [{
+                    label: "Estimated Monthly Bill (₱)",
+                    data: [normalBill, savingBill],
+                    backgroundColor: ["#6c757d", "#198754"],
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: (value) => `₱${value.toLocaleString()}`
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    window.onload = () => {
+        recalculateAll();
+        fetchSavedProfiles();
+    };
+</script>
+</body>
+</html>

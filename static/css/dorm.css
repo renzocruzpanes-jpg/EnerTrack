@@ -1,0 +1,91 @@
+/* =========================================
+   EnerTrack — Dormmate Splitter Styles
+   ========================================= */
+
+:root {
+    --et-green-dark: #0f5132;
+    --et-green-primary: #198754;
+    --et-green-light: #e8f5ee;
+    --et-green-border: #badbcc;
+    --et-bg-page: #f4f7f6;
+}
+
+body {
+    background-color: var(--et-bg-page);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #1e293b;
+}
+
+/* Navbar */
+.navbar-enertrack {
+    background: linear-gradient(135deg, var(--et-green-dark), var(--et-green-primary));
+}
+
+.nav-pill-active {
+    background-color: rgba(255, 255, 255, 0.18);
+    border-radius: 8px;
+    padding: 6px 12px !important;
+}
+
+/* Dorm Hero Banner */
+.dashboard-hero {
+    background: linear-gradient(135deg, var(--et-green-dark) 0%, var(--et-green-primary) 100%);
+    color: #ffffff;
+    border-radius: 16px;
+}
+
+/* Dashboard Cards */
+.card-dashboard {
+    background: #ffffff;
+    border: 1px solid #e6ece9;
+    border-radius: 14px;
+    box-shadow: 0 4px 16px rgba(15, 81, 50, 0.04);
+}
+
+.section-step-badge {
+    background-color: var(--et-green-light);
+    color: var(--et-green-dark);
+    border: 1px solid var(--et-green-border);
+    font-weight: 600;
+    font-size: 0.75rem;
+    padding: 4px 10px;
+    border-radius: 20px;
+}
+
+/* Dormmate Fair-Share Summary Cards */
+.kpi-card {
+    background: #f8faf9;
+    border: 1px solid #e6ece9;
+    border-left: 4px solid var(--et-green-primary);
+    border-radius: 12px;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.kpi-card:hover {
+    background: var(--et-green-light);
+    border-color: var(--et-green-border);
+}
+
+/* Week Toggle Buttons (W1 - W4) */
+.week-toggle-btn {
+    font-size: 0.72rem;
+    min-width: 34px;
+    font-weight: 600;
+    border-radius: 6px;
+}
+
+/* Print Layout */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+    body {
+        background-color: #ffffff !important;
+    }
+    .card-dashboard, .dashboard-hero, .kpi-card {
+        box-shadow: none !important;
+        border: 1px solid #dee2e6 !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+    }
+}

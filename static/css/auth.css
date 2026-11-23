@@ -1,0 +1,78 @@
+/* =========================================
+   EnerTrack — Authentication Pages (Login & Register)
+   ========================================= */
+
+:root {
+    --et-green-dark: #0f5132;
+    --et-green-primary: #198754;
+    --et-green-light: #e8f5ee;
+    --et-green-border: #badbcc;
+    --et-bg-page: #f4f7f6;
+}
+
+body {
+    background-color: var(--et-bg-page);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #1e293b;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Navbar */
+.navbar-enertrack {
+    background: linear-gradient(135deg, var(--et-green-dark), var(--et-green-primary));
+}
+
+/* Centered Auth Card Wrapper */
+.auth-wrapper {
+    max-width: 920px;
+    width: 100%;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 12px 32px rgba(15, 81, 50, 0.08);
+    background: #ffffff;
+    border: 1px solid #e6ece9;
+}
+
+/* Left Green Brand Panel */
+.brand-panel {
+    background: linear-gradient(145deg, var(--et-green-dark), var(--et-green-primary));
+    color: #ffffff;
+}
+
+.step-badge {
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.8rem;
+}
+
+.feature-pill {
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 10px;
+    padding: 12px 14px;
+}
+
+/* Form Input Focus Accent */
+.form-control:focus {
+    border-color: var(--et-green-primary);
+    box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.18);
+}
+
+/* Password Strength Meter */
+.strength-progress {
+    height: 5px;
+    background-color: #e9ecef;
+}
+
+.strength-hint {
+    font-size: 0.75rem;
+}

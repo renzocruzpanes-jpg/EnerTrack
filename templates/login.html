@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In | EnerTrack</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+</head>
+<body>
+
+<nav class="navbar navbar-dark navbar-enertrack py-3 shadow-sm">
+    <div class="container">
+        <a class="navbar-brand fw-bold" href="/login">⚡ EnerTrack</a>
+        <div class="d-flex gap-2">
+            <a href="/login" class="btn btn-light text-success btn-sm fw-semibold">Sign In</a>
+            <a href="/register" class="btn btn-outline-light btn-sm">Create Account</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container my-auto py-5 d-flex justify-content-center">
+    <div class="row g-0 auth-wrapper">
+        <!-- Left Brand & Value Panel -->
+        <div class="col-lg-6 brand-panel p-4 p-md-5 d-none d-lg-flex flex-column justify-content-between">
+            <div>
+                <span class="badge bg-white text-success fw-semibold mb-3">Philippine Household Energy Simulator</span>
+                <h3 class="fw-bold mb-3">Take Control of Your Monthly Electric Bill</h3>
+                <p class="text-white-50 small mb-4">
+                    Model real utility rates across BATELEC I, BATELEC II, and Meralco before your next bill arrives.
+                </p>
+
+                <div class="d-flex flex-column gap-2 small">
+                    <div class="feature-pill">
+                        <strong>Appliance-Level kWh & Peso Breakdown</strong>
+                        <div class="text-white-50">See exact base generation charges, fees, and 12% VAT.</div>
+                    </div>
+                    <div class="feature-pill">
+                        <strong>Single-Factor "What-If" Analyzer</strong>
+                        <div class="text-white-50">Compare switching to inverter appliances or cutting daily hours.</div>
+                    </div>
+                    <div class="feature-pill">
+                        <strong>Saved Household Profiles</strong>
+                        <div class="text-white-50">Store and compare multiple room or seasonal setups anytime.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="small text-white-50 pt-4 border-top border-white border-opacity-25">
+                Tip: Switching a 900W non-inverter aircon to a 540W inverter saves ~₱10,900/year.
+            </div>
+        </div>
+
+        <!-- Right Sign-In Form -->
+        <div class="col-lg-6 p-4 p-md-5 d-flex flex-column justify-content-center">
+            <h4 class="fw-bold mb-1">Welcome Back</h4>
+            <p class="text-muted small mb-4">Sign in to open your EnerTrack dashboard</p>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% for category, msg in messages %}
+                    <div class="alert alert-{{ category }} py-2 small">{{ msg }}</div>
+                {% endfor %}
+            {% endwith %}
+
+            <form method="POST" action="/login" onsubmit="handleLoginSubmit()">
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Email Address</label>
+                    <input type="email" id="loginEmail" name="email" class="form-control" autocomplete="email" placeholder="you@example.com" required>
+                </div>
+
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <label class="form-label small fw-semibold">Password</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="password" id="loginPassword" name="password" class="form-control" autocomplete="current-password" placeholder="Enter your password" required>
+                        <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('loginPassword', this)">Show</button>
+                    </div>
+                </div>
+
+                <div class="form-check mb-4">
+                    <input class="form-check-input" type="checkbox" id="rememberEmailCheck" checked>
+                    <label class="form-check-label small text-muted" for="rememberEmailCheck">
+                        Remember my email on this device
+                    </label>
+                </div>
+
+                <button type="submit" id="loginSubmitBtn" class="btn btn-success w-100 fw-semibold py-2">Sign In to Dashboard</button>
+            </form>
+
+            <div class="text-center mt-4 small text-muted">
+                New to EnerTrack? <a href="/register" class="text-success fw-semibold text-decoration-none">Create a free account</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function togglePassword(inputId, btn) {
+        const input = document.getElementById(inputId);
+        const isHidden = input.type === "password";
+        input.type = isHidden ? "text" : "password";
+        btn.innerText = isHidden ? "Hide" : "Show";
+    }
+
+    function handleLoginSubmit() {
+        const email = document.getElementById("loginEmail").value;
+        const submitBtn = document.getElementById("loginSubmitBtn");
+
+        if (document.getElementById("rememberEmailCheck").checked) {
+            localStorage.setItem("enertrack_saved_email", email);
+        } else {
+            localStorage.removeItem("enertrack_saved_email");
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.innerText = "Signing In...";
+    }
+
+    window.onload = () => {
+        const saved = localStorage.getItem("enertrack_saved_email");
+        if (saved) document.getElementById("loginEmail").value = saved;
+    };
+</script>
+</body>
+</html>
