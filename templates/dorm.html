@@ -39,7 +39,7 @@
                 <span class="badge bg-white text-success fw-semibold mb-2">Student & Shared Room Mode</span>
                 <h3 class="fw-bold mb-1">Dormmate Alternating Schedule & Bill Splitter</h3>
                 <p class="text-white-50 small mb-0">
-                    Assign appliances to specific dormmates and toggle active weeks (e.g., <strong class="text-white">Week 1 Onsite</strong> vs. <strong class="text-white">Week 2 Online</strong>). Shared loads split equally.
+                    Assign appliances to specific dormmates and toggle active weeks (<strong class="text-white">Week 1 Onsite</strong> vs. <strong class="text-white">Week 2 Online</strong>). Shared loads split equally.
                 </p>
             </div>
             <div class="col-lg-5 no-print">
@@ -77,7 +77,7 @@
                 <div class="mb-2">
                     <label class="form-label small fw-semibold mb-1">Preset Appliance</label>
                     <select id="presetSelect" class="form-select form-select-sm" onchange="fillFromPreset()">
-                        <option value="">-- Quick pick or type custom --</option>
+                        <option value="">Quick pick or type custom</option>
                         {% for item in presets %}
                         <option value='{{ item | tojson }}'>{{ item.name }} ({{ item.watts }}W)</option>
                         {% endfor %}
@@ -86,7 +86,7 @@
 
                 <div class="mb-2">
                     <label class="form-label small fw-semibold mb-1">Appliance Name</label>
-                    <input type="text" id="appName" class="form-control form-control-sm" placeholder="e.g., Gaming Laptop (Online Class)">
+                    <input type="text" id="appName" class="form-control form-control-sm" placeholder="Gaming Laptop (Online Class)">
                 </div>
 
                 <div class="row g-2 mb-3">
@@ -95,7 +95,7 @@
                         <input type="number" id="appWatts" class="form-control form-control-sm" placeholder="65" min="1">
                     </div>
                     <div class="col-4">
-                        <label class="form-label small fw-semibold mb-1">Hrs / Day</label>
+                        <label class="form-label small fw-semibold mb-1">Hrs Per Day</label>
                         <input type="number" id="appHours" class="form-control form-control-sm" placeholder="8" step="0.5" min="0.1" max="24">
                     </div>
                     <div class="col-4">
@@ -164,7 +164,7 @@
                 </div>
 
                 <div class="small text-muted bg-light border rounded p-2 px-3 mt-auto">
-                    <strong>How Fair-Share Works:</strong> Shared appliances (e.g., refrigerator, Wi-Fi router) plus fixed monthly utility charges split equally among all dormmates. Personal appliances are billed only for active weeks.
+                    <strong>How Fair-Share Works:</strong> Shared appliances (refrigerator, Wi-Fi router) plus fixed monthly utility charges split equally among all dormmates. Personal appliances are billed only for active weeks.
                 </div>
             </div>
         </div>
@@ -395,7 +395,7 @@
     }
 
     async function saveDormProfile() {
-        const name = prompt("Enter a name for this dorm schedule (e.g., Dorm Room 204 - Alternating):");
+        const name = prompt("Enter a name for this dorm schedule (Dorm Room 204 - Alternating):");
         if (!name || !name.trim()) return;
 
         const utilityCode = document.getElementById("utilitySelect").value;
