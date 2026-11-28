@@ -23,9 +23,6 @@
                 <li class="nav-item"><a class="nav-link text-white" href="#whatIfSection">What-If Analyzer</a></li>
                 <li class="nav-item"><a class="nav-link text-white" href="#simSection">Simulation & Charts</a></li>
                 <li class="nav-item"><a class="nav-link text-white" href="#tipsSection">Saving Tips</a></li>
-                <li class="nav-item ms-lg-2">
-                    <a class="nav-link text-white fw-semibold nav-pill-active" href="/dorm">🏠 Dormmate Splitter</a>
-                </li>
             </ul>
             <div class="d-flex align-items-center gap-3">
                 <span class="text-white small">👤 <strong>{{ user_name or 'Guest' }}</strong></span>
@@ -128,7 +125,7 @@
                     </select>
                 </div>
 
-                <!-- Custom Rate Box (Now includes Non-VAT pass-through charges) -->
+                <!-- Custom Rate Box (Includes Non-VAT pass-through charges) -->
                 <div id="customRateBox" class="row g-2 mb-3 p-2 bg-light rounded border d-none">
                     <div class="col-4">
                         <label class="form-label small fw-semibold mb-1">Base (₱/kWh)</label>
@@ -823,6 +820,11 @@
             showStatus(err.message, "danger");
         }
     }
+
+    window.addEventListener("beforeprint", () => {
+        if (usageChart) usageChart.resize();
+        if (simChart) simChart.resize();
+    });
 
     window.onload = () => {
         recalculateAll();

@@ -125,16 +125,32 @@ body {
 
 /* Print Layout */
 @media print {
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
     .no-print {
         display: none !important;
     }
     body {
         background-color: #ffffff !important;
     }
-    .card-dashboard, .dashboard-hero, .kpi-card, .kpi-card-featured {
+    .dashboard-hero, .kpi-card-featured {
+        background: linear-gradient(135deg, var(--et-green-dark), var(--et-green-primary)) !important;
+        color: #ffffff !important;
+        box-shadow: none !important;
+    }
+    .dashboard-hero .text-white-50,
+    .kpi-card-featured .text-white-50 {
+        color: rgba(255, 255, 255, 0.88) !important;
+    }
+    .card-dashboard, .kpi-card {
         box-shadow: none !important;
         border: 1px solid #dee2e6 !important;
-        background: #ffffff !important;
-        color: #000000 !important;
+        break-inside: avoid;
+    }
+    .table-responsive {
+        max-height: none !important;
+        overflow: visible !important;
     }
 }

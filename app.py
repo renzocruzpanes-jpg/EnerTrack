@@ -250,15 +250,6 @@ def home():
     )
 
 
-@app.route("/dorm")
-@login_required
-def dorm_planner():
-    return render_template(
-        "dorm.html",
-        user_name=session.get("user_name"),
-        utilities=UTILITY_RATES,
-        presets=APPLIANCE_PRESETS
-    )
 
 
 @app.route("/api/calculate", methods=["POST"])
