@@ -92,7 +92,7 @@
         </div>
         <div class="col-6 col-lg-3">
             <div class="kpi-card">
-                <div class="small text-muted fw-semibold">Distribution & 12% VAT</div>
+                <div class="small text-muted fw-semibold">Distribution, Fees & VAT</div>
                 <div class="h4 fw-bold text-dark mb-0 mt-1" id="feesCost">₱0.00</div>
                 <div class="small text-muted mt-1">Other charges + fixed fee</div>
             </div>
@@ -128,15 +128,19 @@
                     </select>
                 </div>
 
-                <!-- Custom Rate Box -->
+                <!-- Custom Rate Box (Now includes Non-VAT pass-through charges) -->
                 <div id="customRateBox" class="row g-2 mb-3 p-2 bg-light rounded border d-none">
-                    <div class="col-6">
+                    <div class="col-4">
                         <label class="form-label small fw-semibold mb-1">Base (₱/kWh)</label>
-                        <input type="number" id="customBaseRate" class="form-control form-control-sm" value="6.50" step="0.01" min="0" oninput="recalculateAll()">
+                        <input type="number" id="customBaseRate" class="form-control form-control-sm" value="6.97" step="0.01" min="0" oninput="recalculateAll()">
                     </div>
-                    <div class="col-6">
-                        <label class="form-label small fw-semibold mb-1">Fees (₱/kWh)</label>
-                        <input type="number" id="customOtherRate" class="form-control form-control-sm" value="3.50" step="0.01" min="0" oninput="recalculateAll()">
+                    <div class="col-4">
+                        <label class="form-label small fw-semibold mb-1">Vatable Fees</label>
+                        <input type="number" id="customOtherRate" class="form-control form-control-sm" value="2.16" step="0.01" min="0" oninput="recalculateAll()">
+                    </div>
+                    <div class="col-4">
+                        <label class="form-label small fw-semibold mb-1">Non-VAT Fees</label>
+                        <input type="number" id="customNonVatRate" class="form-control form-control-sm" value="1.56" step="0.01" min="0" oninput="recalculateAll()">
                     </div>
                 </div>
 
@@ -204,7 +208,7 @@
                 </div>
 
                 <div class="small text-muted bg-light border rounded p-2 px-3 mt-auto">
-                    <strong>Note:</strong> Calculations reflect a 30-day billing cycle including base generation rate, distribution/other charges, fixed fee, and 12% VAT.
+                    <strong>Note:</strong> Calculations reflect a 30-day billing cycle including base generation rate, distribution/other charges, non-VAT pass-throughs, fixed fee, and VAT.
                 </div>
             </div>
         </div>
@@ -411,7 +415,7 @@
             ["Utility Provider", `"${lastCalculatedData.utility_name}"`],
             ["Total Monthly kWh", lastCalculatedData.total_kwh],
             ["Base Cost (PHP)", lastCalculatedData.cost_without_fees],
-            ["Fees & 12% VAT (PHP)", lastCalculatedData.fees_and_taxes],
+            ["Fees & VAT (PHP)", lastCalculatedData.fees_and_taxes],
             ["Estimated Total Bill (PHP)", lastCalculatedData.total_cost_with_fees],
             [],
             ["Appliance", "Watts (W)", "Hours/Day", "Monthly kWh", "Total Cost (PHP)"]
@@ -511,6 +515,7 @@
                     name: "Custom Utility Rate",
                     base_rate: parseFloat(document.getElementById("customBaseRate").value) || 0,
                     other_charges: parseFloat(document.getElementById("customOtherRate").value) || 0,
+                    non_vat_charges: parseFloat(document.getElementById("customNonVatRate").value) || 0,
                     vat_rate: 0.12,
                     fixed_monthly_fee: 5.60
                 }
@@ -638,7 +643,7 @@
 
             refreshWhatIfDropdown();
             updateUsageChart(data.appliances);
-            runSimulation();
+            await runSimulation();
         } catch (err) {
             showStatus(err.message, "danger");
         }
@@ -744,7 +749,7 @@
         });
     }
 
-    function runSimulation() {
+    async function runSimulation() {
         const hourCutSlider = document.getElementById("hourCutSlider");
         const wattCutSlider = document.getElementById("wattCutSlider");
         if (!hourCutSlider || !wattCutSlider) return;
@@ -755,58 +760,68 @@
         document.getElementById("hourCutLabel").textContent = `${hourCut}%`;
         document.getElementById("wattCutLabel").textContent = `${wattCut}%`;
 
-        const normalBill = lastCalculatedData ? lastCalculatedData.total_cost_with_fees : 0;
-        const normalKwh = lastCalculatedData ? lastCalculatedData.total_kwh : 0;
+        const savingAppliances = appliances.map(item => ({
+            name: item.name,
+            watts: Number((item.watts * (1 - wattCut / 100)).toFixed(2)),
+            hours: Number((item.hours * (1 - hourCut / 100)).toFixed(2))
+        }));
 
-        const remainingRatio = (1 - hourCut / 100) * (1 - wattCut / 100);
-        const fixedFeeWithVat = normalKwh > 0 ? 5.60 * 1.12 : 0;
-        const variableBill = Math.max(0, normalBill - fixedFeeWithVat);
-        const savingBill = normalKwh > 0
-            ? Number(((variableBill * remainingRatio) + fixedFeeWithVat).toFixed(2))
-            : 0;
+        try {
+            const ratePayload = getRatePayload();
+            const res = await apiFetch("/api/simulate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    normal_appliances: appliances,
+                    saving_appliances: savingAppliances,
+                    ...ratePayload
+                })
+            });
+            if (!res) return;
 
-        const moneySaved = Math.max(0, Number((normalBill - savingBill).toFixed(2)));
-        const percentSaved = normalBill > 0
-            ? Number(((moneySaved / normalBill) * 100).toFixed(1))
-            : 0;
+            const normalBill = res.normal.total_cost_with_fees;
+            const savingBill = res.energy_saving.total_cost_with_fees;
 
-        document.getElementById("savingsBadge").textContent =
-            `Save ₱${moneySaved.toLocaleString(undefined, { minimumFractionDigits: 2 })} (${percentSaved}%)`;
+            document.getElementById("savingsBadge").textContent =
+                `Save ₱${res.money_saved.toLocaleString(undefined, { minimumFractionDigits: 2 })} (${res.percent_saved}%)`;
 
-        const ctx = document.getElementById("simChart").getContext("2d");
+            const ctx = document.getElementById("simChart").getContext("2d");
 
-        if (simChart) {
-            simChart.data.datasets[0].data = [normalBill, savingBill];
-            simChart.update("none");
-            return;
-        }
+            if (simChart) {
+                simChart.data.datasets[0].data = [normalBill, savingBill];
+                simChart.update("none");
+                return;
+            }
 
-        simChart = new Chart(ctx, {
-            type: "bar",
-            data: {
-                labels: ["Current Usage", "Energy-Saving Scenario"],
-                datasets: [{
-                    label: "Estimated Monthly Bill (₱)",
-                    data: [normalBill, savingBill],
-                    backgroundColor: ["#6c757d", "#198754"],
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                animation: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            callback: (value) => `₱${value.toLocaleString()}`
+            simChart = new Chart(ctx, {
+                type: "bar",
+                data: {
+                    labels: ["Current Usage", "Energy-Saving Scenario"],
+                    datasets: [{
+                        label: "Estimated Monthly Bill (₱)",
+                        data: [normalBill, savingBill],
+                        backgroundColor: ["#6c757d", "#198754"],
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: (value) => `₱${value.toLocaleString()}`
+                            }
                         }
                     }
                 }
-            }
-        });
+            });
+        } catch (err) {
+            showStatus(err.message, "danger");
+        }
     }
 
     window.onload = () => {

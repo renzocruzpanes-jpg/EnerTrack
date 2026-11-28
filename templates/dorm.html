@@ -104,8 +104,6 @@
                             <option value="Shared">Shared</option>
                             <option value="Dormmate A">Dormmate A</option>
                             <option value="Dormmate B">Dormmate B</option>
-                            <option value="Dormmate C">Dormmate C</option>
-                            <option value="Dormmate D">Dormmate D</option>
                         </select>
                     </div>
                 </div>
@@ -214,6 +212,20 @@
 
     let shareChart = null;
 
+    function syncDormmateDropdown(count) {
+        const select = document.getElementById("appOwner");
+        const current = select.value;
+        const options = ['<option value="Shared">Shared</option>'];
+        for (let i = 0; i < count; i++) {
+            const label = `Dormmate ${String.fromCharCode(65 + i)}`;
+            options.push(`<option value="${label}">${label}</option>`);
+        }
+        select.innerHTML = options.join("");
+        if ([...select.options].some(o => o.value === current)) {
+            select.value = current;
+        }
+    }
+
     function weeksToDays(weeks) {
         const activeCount = weeks.reduce((a, b) => a + b, 0);
         return Math.max(1, Math.round(activeCount * 7.5));
@@ -279,7 +291,8 @@
 
     async function recalculateDorm() {
         const utilityCode = document.getElementById("utilitySelect").value;
-        const dormmates = parseInt(document.getElementById("dormmateCount").value) || 2;
+        const dormmates = Math.min(10, Math.max(2, parseInt(document.getElementById("dormmateCount").value) || 2));
+        syncDormmateDropdown(dormmates);
 
         const payloadApps = dormAppliances.map(item => ({
             name: item.name,
@@ -348,7 +361,7 @@
                 labels: merged.map(m => m.owner),
                 datasets: [{
                     data: merged.map(m => m.total_due),
-                    backgroundColor: ["#0f5132", "#198754", "#20c997", "#52b788", "#74c69d", "#495057"],
+                    backgroundColor: ["#0f5132", "#198754", "#20c997", "#52b788", "#74c69d", "#495057", "#6c757d", "#adb5bd", "#343a40", "#146c43"],
                     borderWidth: 2,
                     borderColor: "#ffffff"
                 }]

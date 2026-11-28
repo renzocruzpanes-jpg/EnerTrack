@@ -13,11 +13,19 @@ EnerTrack is a web-based household electricity consumption and cost simulator ta
 ## Project Structure
 ```text
 EnerTrack/
-├── app.py              # Flask routes and API endpoints
-├── calculator.py       # Energy & Philippine utility bill calculation engine
-├── database.py         # SQLite database persistence layer
-├── enertrack.db        # Auto-generated SQLite database
-├── requirements.txt    # Python dependencies
-├── README.md           # Project documentation
-└── templates/
-    └── index.html      # Bootstrap 5 & Chart.js dashboard frontend
+├── app.py
+├── calculator.py
+├── database.py
+├── enertrack.db
+├── requirements.txt
+├── templates/
+│   ├── index.html
+│   ├── dorm.html
+│   ├── login.html
+│   └── register.html
+└── static/
+    └── css/
+        ├── dashboard.css
+        ├── dorm.css
+        ├── auth.css
+        └── login.css
